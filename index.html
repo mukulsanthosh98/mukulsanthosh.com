@@ -653,12 +653,14 @@ class Component extends DCLogic {
     this.ctx.fillRect(0, 0, L.w, L.h);
     if (img && img.complete && img.naturalWidth) {
       this.ctx.drawImage(img, L.x, L.y, L.dw, L.dh);
+      // mobile: stretch the frame's top edge up to the section top so the backdrop continues seamlessly
+      if (this.mobile && L.y > 0) this.ctx.drawImage(img, 0, 0, img.naturalWidth, 2, L.x, 0, L.dw, L.y + 1);
       // cover the faint generator watermark (bottom-right of each frame)
       const pw = L.dw * 0.055, ph = L.dh * 0.1, px = L.x + L.dw * 0.906 - pw / 2, py = L.y + L.dh * 0.832 - ph / 2;
       const g = this.ctx.createRadialGradient(px + pw / 2, py + ph / 2, ph * 0.2, px + pw / 2, py + ph / 2, ph * 0.6);
       g.addColorStop(0, this.bg); g.addColorStop(1, this.bg.startsWith('rgb(') ? this.bg.replace('rgb(', 'rgba(').replace(')', ',0)') : 'rgba(243,243,243,0)');
       this.ctx.fillStyle = g; this.ctx.fillRect(px - pw * .2, py - ph * .2, pw * 1.4, ph * 1.4);
-      if (this.mobile) { const bgT = this.bg.startsWith('rgb(') ? this.bg.replace('rgb(', 'rgba(').replace(')', ',0)') : 'rgba(243,243,243,0)'; const fy = L.y + L.dh * 0.72, fg = this.ctx.createLinearGradient(0, fy, 0, L.y + L.dh); fg.addColorStop(0, bgT); fg.addColorStop(1, this.bg); this.ctx.fillStyle = fg; this.ctx.fillRect(0, fy, L.w, L.y + L.dh - fy + 1); const sg = this.ctx.createLinearGradient(L.x, 0, L.x + L.dw * 0.12, 0); sg.addColorStop(0, this.bg); sg.addColorStop(1, bgT); this.ctx.fillStyle = sg; this.ctx.fillRect(L.x, L.y, L.dw * 0.12, L.dh); const sg2 = this.ctx.createLinearGradient(L.x + L.dw, 0, L.x + L.dw * 0.88, 0); sg2.addColorStop(0, this.bg); sg2.addColorStop(1, bgT); this.ctx.fillStyle = sg2; this.ctx.fillRect(L.x + L.dw * 0.88, L.y, L.dw * 0.12, L.dh); }
+      if (this.mobile) { const bgT = this.bg.startsWith('rgb(') ? this.bg.replace('rgb(', 'rgba(').replace(')', ',0)') : 'rgba(243,243,243,0)'; const fy = L.y + L.dh * 0.72, fg = this.ctx.createLinearGradient(0, fy, 0, L.y + L.dh); fg.addColorStop(0, bgT); fg.addColorStop(1, this.bg); this.ctx.fillStyle = fg; this.ctx.fillRect(0, fy, L.w, L.y + L.dh - fy + 1); const sg = this.ctx.createLinearGradient(L.x, 0, L.x + L.dw * 0.12, 0); sg.addColorStop(0, this.bg); sg.addColorStop(1, bgT); this.ctx.fillStyle = sg; this.ctx.fillRect(L.x, L.y, L.dw * 0.12, L.dh); const sg2 = this.ctx.createLinearGradient(L.x + L.dw, 0, L.x + L.dw * 0.88, 0); sg2.addColorStop(0, this.bg); sg2.addColorStop(1, bgT); this.ctx.fillStyle = sg2; this.ctx.fillRect(L.x + L.dw * 0.88, L.y, L.dw * 0.12, L.dh); const wg = this.ctx.createLinearGradient(0, 0, 0, 48); wg.addColorStop(0, '#ffffff'); wg.addColorStop(1, bgT); this.ctx.fillStyle = wg; this.ctx.fillRect(0, 0, L.w, 48); }
     }
   }
 
