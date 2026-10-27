@@ -716,7 +716,7 @@ class Component extends DCLogic {
     const self = this;
     const n = this.chips.length;
     // Box mouth in frame-relative coords: upright (f1), lifted (f48), tipped toward camera (f69)
-    const P = [{ cx: 0.5, cy: 0.63, sw: 0.19, sh: 0.06 }, { cx: 0.5, cy: 0.545, sw: 0.2, sh: 0.06 }, self.mobile ? { cx: 0.5, cy: 0.63, sw: 0.14, sh: 0.14 } : { cx: 0.5, cy: 0.675, sw: 0.15, sh: 0.075 }];
+    const P = [{ cx: 0.5, cy: 0.63, sw: 0.19, sh: 0.06 }, { cx: 0.5, cy: 0.545, sw: 0.2, sh: 0.06 }, self.mobile ? { cx: 0.5, cy: 0.645, sw: 0.15, sh: 0.1 } : { cx: 0.5, cy: 0.675, sw: 0.185, sh: 0.085 }];
     const t48 = D * 47 / 143;
     this.chips.forEach((el, i) => {
       const at = start + i * 0.06;
@@ -727,19 +727,26 @@ class Component extends DCLogic {
       const rot = ((i * 37) % 70) - 35;
       const jx = ((i * 53) % 100) / 100 - 0.5, jy = ((i * 29) % 100) / 100;
       const s0 = self.mobile ? 0.44 : 0.85;
+      // jittered rows across the box floor: back rows narrower (perspective), front rows wider and on top
+      const R = 4, base = [6, 7, 8, 9], tot = base.reduce((a, b) => a + b, 0);
+      const counts = base.map(c => Math.round(c * n / tot)); counts[R - 1] += n - counts.reduce((a, b) => a + b, 0);
+      const si = (i * 7) % n; let r = 0, acc = 0; while (r < R - 1 && si >= acc + counts[r]) { acc += counts[r]; r++; }
+      const c = si - acc, cnt = Math.max(1, counts[r]), h1 = ((i * 73) % 100) / 100 - 0.5, h2 = ((i * 37 + 11) % 100) / 100 - 0.5;
+      const widen = 0.72 + 0.28 * r / (R - 1);
+      const slot = { fx: ((c + 0.5) / cnt - 0.5 + h1 * 0.3 / cnt) * widen, fy: (r + 0.5) / R - 0.5 + h2 * 0.35 / R, s: s0 * (0.9 + 0.1 * r / (R - 1)), z: r * 100 + c };
       const ic = el.firstElementChild && el.firstElementChild.firstElementChild ? el.firstElementChild : null;
       const icd = () => ic ? { x: ic.offsetLeft + ic.offsetWidth / 2 - el.offsetWidth / 2, y: ic.offsetTop + ic.offsetHeight / 2 - el.offsetHeight / 2 } : { x: 0, y: 0 };
       const pile = k => {
         const q = P[k];
         return {
-          x: () => { const L = self.layout(), p = self.chipPos(el); return L.x + L.dw * (q.cx + jx * q.sw) - p.x - (k === 2 ? icd().x * s0 : 0); },
-          y: () => { const L = self.layout(), p = self.chipPos(el); return L.y + L.dh * (q.cy - (k < 2 ? jy * q.sh : (jy - 0.5) * q.sh)) - p.y - (k === 2 ? icd().y * s0 : 0); }
+          x: () => { const L = self.layout(), p = self.chipPos(el); return L.x + L.dw * (k === 2 ? q.cx + slot.fx * q.sw : q.cx + jx * q.sw) - p.x - (k === 2 ? icd().x * slot.s : 0); },
+          y: () => { const L = self.layout(), p = self.chipPos(el); return L.y + L.dh * (k === 2 ? q.cy + slot.fy * q.sh : q.cy - (k < 2 ? jy * q.sh : (jy - 0.5) * q.sh)) - p.y - (k === 2 ? icd().y * slot.s : 0); }
         };
       };
       const p2 = pile(2);
       const dy = () => { const L = self.layout(), p = self.chipPos(el); return L.oy - p.y; };
       const tIn = D * 95 / 143;
-      gsap.set(el, { x: p2.x, y: p2.y, scale: s0, rotation: rot * 0.7, autoAlpha: 0, zIndex: n - i });
+      gsap.set(el, { x: p2.x, y: p2.y, scale: slot.s, rotation: rot * 0.55, autoAlpha: 0, zIndex: slot.z });
       tl.to(el, { autoAlpha: 1, duration: start - tIn, ease: 'power1.in' }, tIn)
         .to(el, { x: 0, rotation: 0, duration: 1.1, ease: 'power1.inOut' }, at)
         .to(el, { scale: 1, duration: 0.5, ease: 'power2.out' }, at)
