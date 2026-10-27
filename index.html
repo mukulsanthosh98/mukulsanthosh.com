@@ -531,7 +531,7 @@ class Component extends DCLogic {
     const sw = Math.min(330, Math.max(150, W * 0.22)), cx = card.x + card.w * 0.3, f = n => n.toFixed(1);
     let pts, segs2 = null;
     if (W < 760) {
-      const t = Math.tan(35 * Math.PI / 180), ext = sw * 1.2; const diag = (mx, my) => { const ya = my - (W + ext - mx) / t, yb = my + (mx + ext) / t; return [[W + ext, ya], [-ext, yb]]; }; const s1 = diag(card.x + card.w * 0.5, card.y + card.h * 0.5); if (s1[0][1] < A.y - sw) { s1[0] = [s1[0][0] - t * (A.y - sw - s1[0][1]), A.y - sw]; } pts = s1; if (head) { const Hh = off(head); segs2 = diag(Hh.x + Hh.w * 0.5, Hh.y + Hh.h * 0.5); }
+      const t = Math.tan(35 * Math.PI / 180), ext = sw * 1.2; const diag = (mx, my) => { const ya = my - (W + ext - mx) / t, yb = my + (mx + ext) / t; return [[W + ext, ya], [-ext, yb]]; }; const cmx = card.x + card.w * 0.5, s1 = diag(cmx, card.y + card.h + 40 - (cmx + ext) / t); if (s1[0][1] < A.y - sw) { s1[0] = [s1[0][0] - t * (A.y - sw - s1[0][1]), A.y - sw]; } pts = s1; if (head) { const Hh = off(head); segs2 = diag(Hh.x + Hh.w * 0.5, Hh.y + Hh.h * 0.5); }
     } else {
       const H = head ? off(head) : { x: W * 0.62, y: C.y + C.h * 0.5, w: W * 0.24, h: 0 };
       const hx = H.x + H.w * 0.5, hy = H.y + H.h * 0.5;
