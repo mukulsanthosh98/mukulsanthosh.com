@@ -716,7 +716,7 @@ class Component extends DCLogic {
     const self = this;
     const n = this.chips.length;
     // Box mouth in frame-relative coords: upright (f1), lifted (f48), tipped toward camera (f69)
-    const P = [{ cx: 0.5, cy: 0.63, sw: 0.19, sh: 0.06 }, { cx: 0.5, cy: 0.545, sw: 0.2, sh: 0.06 }, { cx: 0.5, cy: 0.63, sw: 0.14, sh: 0.14 }];
+    const P = [{ cx: 0.5, cy: 0.63, sw: 0.19, sh: 0.06 }, { cx: 0.5, cy: 0.545, sw: 0.2, sh: 0.06 }, self.mobile ? { cx: 0.5, cy: 0.63, sw: 0.14, sh: 0.14 } : { cx: 0.5, cy: 0.675, sw: 0.15, sh: 0.075 }];
     const t48 = D * 47 / 143;
     this.chips.forEach((el, i) => {
       const at = start + i * 0.06;
@@ -726,17 +726,20 @@ class Component extends DCLogic {
       gsap.set(label, { autoAlpha: 0, x: -6 });
       const rot = ((i * 37) % 70) - 35;
       const jx = ((i * 53) % 100) / 100 - 0.5, jy = ((i * 29) % 100) / 100;
+      const s0 = self.mobile ? 0.44 : 0.85;
+      const ic = el.firstElementChild && el.firstElementChild.firstElementChild ? el.firstElementChild : null;
+      const icd = () => ic ? { x: ic.offsetLeft + ic.offsetWidth / 2 - el.offsetWidth / 2, y: ic.offsetTop + ic.offsetHeight / 2 - el.offsetHeight / 2 } : { x: 0, y: 0 };
       const pile = k => {
         const q = P[k];
         return {
-          x: () => { const L = self.layout(), p = self.chipPos(el); return L.x + L.dw * (q.cx + jx * q.sw) - p.x; },
-          y: () => { const L = self.layout(), p = self.chipPos(el); return L.y + L.dh * (q.cy - (k < 2 ? jy * q.sh : (jy - 0.5) * q.sh)) - p.y; }
+          x: () => { const L = self.layout(), p = self.chipPos(el); return L.x + L.dw * (q.cx + jx * q.sw) - p.x - (k === 2 ? icd().x * s0 : 0); },
+          y: () => { const L = self.layout(), p = self.chipPos(el); return L.y + L.dh * (q.cy - (k < 2 ? jy * q.sh : (jy - 0.5) * q.sh)) - p.y - (k === 2 ? icd().y * s0 : 0); }
         };
       };
       const p2 = pile(2);
       const dy = () => { const L = self.layout(), p = self.chipPos(el); return L.oy - p.y; };
       const tIn = D * 95 / 143;
-      gsap.set(el, { x: p2.x, y: p2.y, scale: 0.44, rotation: rot * 0.7, autoAlpha: 0, zIndex: n - i });
+      gsap.set(el, { x: p2.x, y: p2.y, scale: s0, rotation: rot * 0.7, autoAlpha: 0, zIndex: n - i });
       tl.to(el, { autoAlpha: 1, duration: start - tIn, ease: 'power1.in' }, tIn)
         .to(el, { x: 0, rotation: 0, duration: 1.1, ease: 'power1.inOut' }, at)
         .to(el, { scale: 1, duration: 0.5, ease: 'power2.out' }, at)
