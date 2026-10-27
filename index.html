@@ -670,7 +670,7 @@ class Component extends DCLogic {
     if (!this.pile || this.cur >= 100) return;
     const f = Math.min(95, this.cur + 1);
     // front-wall top edge (frame-relative y) and pile offset below it, measured from the frames
-    const K = [[1,.70,.02],[24,.70,.02],[30,.61,.045],[36,.47,.09],[48,.43,.09],[54,.54,.05],[60,.57,.03],[66,.615,.005],[75,.655,-.02],[85,.675,-.04],[95,.705,-.06]];
+    const K = [[1,.70,.14],[24,.70,.14],[30,.61,.14],[36,.47,.14],[48,.43,.14],[54,.54,.09],[60,.57,.045],[66,.615,.005],[75,.655,-.02],[85,.675,-.04],[95,.705,-.06]];
     let a = K[K.length - 2], b = K[K.length - 1];
     for (let k = 0; k < K.length - 1; k++) if (f >= K[k][0] && f <= K[k + 1][0]) { a = K[k]; b = K[k + 1]; break; }
     const t = b[0] === a[0] ? 0 : (f - a[0]) / (b[0] - a[0]);
