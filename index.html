@@ -661,7 +661,37 @@ class Component extends DCLogic {
       g.addColorStop(0, this.bg); g.addColorStop(1, this.bg.startsWith('rgb(') ? this.bg.replace('rgb(', 'rgba(').replace(')', ',0)') : 'rgba(243,243,243,0)');
       this.ctx.fillStyle = g; this.ctx.fillRect(px - pw * .2, py - ph * .2, pw * 1.4, ph * 1.4);
       if (this.mobile) { const bgT = this.bg.startsWith('rgb(') ? this.bg.replace('rgb(', 'rgba(').replace(')', ',0)') : 'rgba(243,243,243,0)'; const fy = L.y + L.dh * 0.72, fg = this.ctx.createLinearGradient(0, fy, 0, L.y + L.dh); fg.addColorStop(0, bgT); fg.addColorStop(1, this.bg); this.ctx.fillStyle = fg; this.ctx.fillRect(0, fy, L.w, L.y + L.dh - fy + 1); const sg = this.ctx.createLinearGradient(L.x, 0, L.x + L.dw * 0.12, 0); sg.addColorStop(0, this.bg); sg.addColorStop(1, bgT); this.ctx.fillStyle = sg; this.ctx.fillRect(L.x, L.y, L.dw * 0.12, L.dh); const sg2 = this.ctx.createLinearGradient(L.x + L.dw, 0, L.x + L.dw * 0.88, 0); sg2.addColorStop(0, this.bg); sg2.addColorStop(1, bgT); this.ctx.fillStyle = sg2; this.ctx.fillRect(L.x + L.dw * 0.88, L.y, L.dw * 0.12, L.dh); const wg = this.ctx.createLinearGradient(0, 0, 0, 48); wg.addColorStop(0, '#ffffff'); wg.addColorStop(1, bgT); this.ctx.fillStyle = wg; this.ctx.fillRect(0, 0, L.w, 48); }
+      this.drawPile(L);
     }
+  }
+
+  // Tools drawn inside the box (behind its front wall) until they spill out as DOM chips
+  drawPile(L) {
+    if (!this.pile || this.cur >= 100) return;
+    const f = Math.min(95, this.cur + 1);
+    // front-wall top edge (frame-relative y) and pile offset below it, measured from the frames
+    const K = [[1,.70,.02],[24,.70,.02],[30,.61,.045],[36,.47,.09],[48,.43,.09],[54,.54,.05],[60,.57,.03],[66,.615,.005],[75,.655,-.02],[85,.675,-.04],[95,.705,-.06]];
+    let a = K[K.length - 2], b = K[K.length - 1];
+    for (let k = 0; k < K.length - 1; k++) if (f >= K[k][0] && f <= K[k + 1][0]) { a = K[k]; b = K[k + 1]; break; }
+    const t = b[0] === a[0] ? 0 : (f - a[0]) / (b[0] - a[0]);
+    const edge = a[1] + (b[1] - a[1]) * t, off = a[2] + (b[2] - a[2]) * t;
+    const q = this.pile.q, cy = edge + off, ctx = this.ctx;
+    ctx.save();
+    ctx.beginPath(); ctx.rect(L.x + L.dw * 0.36, L.y, L.dw * 0.28, L.dh * edge); ctx.clip();
+    const order = this.pile.items.slice().sort((m, n) => m.slot.z - n.slot.z);
+    for (const it of order) {
+      const sp = it.icon, im = it.img; if (!sp || !im || !im.complete || !im.naturalWidth) continue;
+      const S = sp.offsetWidth * it.slot.s, iw = im.offsetWidth * it.slot.s, ih = im.offsetHeight * it.slot.s;
+      const X = L.x + L.dw * (q.cx + it.slot.fx * q.sw), Y = L.y + L.dh * (cy + it.slot.fy * q.sh);
+      ctx.save(); ctx.translate(X, Y); ctx.rotate(it.rot * Math.PI / 180);
+      const r = Math.min(S / 2, parseFloat(it.radius) * it.slot.s || 8);
+      ctx.fillStyle = it.bg; ctx.beginPath();
+      if (ctx.roundRect) ctx.roundRect(-S / 2, -S / 2, S, S, r); else ctx.rect(-S / 2, -S / 2, S, S);
+      ctx.fill();
+      ctx.drawImage(im, -iw / 2, -ih / 2, iw, ih);
+      ctx.restore();
+    }
+    ctx.restore();
   }
 
   chipPos(el) {
@@ -725,7 +755,8 @@ class Component extends DCLogic {
     const self = this;
     const n = this.chips.length;
     // Box mouth in frame-relative coords: upright (f1), lifted (f48), tipped toward camera (f69)
-    const P = [{ cx: 0.5, cy: 0.63, sw: 0.19, sh: 0.06 }, { cx: 0.5, cy: 0.545, sw: 0.2, sh: 0.06 }, self.mobile ? { cx: 0.5, cy: 0.645, sw: 0.15, sh: 0.1 } : { cx: 0.5, cy: 0.672, sw: 0.18, sh: 0.1 }];
+    const P = [{ cx: 0.5, cy: 0.63, sw: 0.19, sh: 0.06 }, { cx: 0.5, cy: 0.545, sw: 0.2, sh: 0.06 }, self.mobile ? { cx: 0.49, cy: 0.645, sw: 0.15, sh: 0.085 } : { cx: 0.49, cy: 0.645, sw: 0.17, sh: 0.085 }];
+    this.pile = { q: P[2], items: [] };
     const t48 = D * 47 / 143;
     this.chips.forEach((el, i) => {
       const at = start + i * 0.06;
@@ -756,7 +787,10 @@ class Component extends DCLogic {
       const dy = () => { const L = self.layout(), p = self.chipPos(el); return L.oy - p.y; };
       const tIn = D * 95 / 143;
       gsap.set(el, { x: p2.x, y: p2.y, scale: slot.s, rotation: rot * 0.55, autoAlpha: 0, zIndex: slot.z });
-      tl.to(el, { autoAlpha: 1, duration: start - tIn, ease: 'power1.in' }, tIn)
+      { const icon = el.firstElementChild, im = icon && icon.querySelector('img'); if (im) { im.loading = 'eager'; if (!im.complete) im.addEventListener('load', () => this.draw(), { once: true }); }
+        const ics = icon ? getComputedStyle(icon) : null;
+        this.pile.items.push({ icon, img: im, slot, rot: rot * 0.55, bg: ics ? ics.backgroundColor : '#F4F6F9', radius: ics ? ics.borderTopLeftRadius : '8px' }); }
+      tl.to(el, { autoAlpha: 1, duration: 0.04, ease: 'none' }, tIn)
         .to(el, { x: 0, rotation: 0, duration: 1.1, ease: 'power1.inOut' }, at)
         .to(el, { scale: 1, duration: 0.5, ease: 'power2.out' }, at)
         .to(el, { y: () => dy() * 0.45 - 90, duration: 0.38, ease: 'power2.out' }, at)
