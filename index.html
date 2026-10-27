@@ -667,7 +667,7 @@ class Component extends DCLogic {
 
   // Tools drawn inside the box (behind its front wall) until they spill out as DOM chips
   drawPile(L) {
-    if (!this.pile || this.cur >= 100) return;
+    if (!this.pile || this.cur >= 97) return;
     const f = Math.min(95, this.cur + 1);
     // front-wall top edge (frame-relative y) and pile offset below it, measured from the frames
     const K = [[1,.70,.14],[24,.70,.14],[30,.61,.14],[36,.47,.14],[48,.43,.14],[54,.54,.09],[60,.57,.045],[66,.615,.005],[75,.655,-.02],[85,.675,-.04],[95,.705,-.06]];
@@ -747,6 +747,11 @@ class Component extends DCLogic {
     let lastW = window.innerWidth;
     this.onOrient = () => { clearTimeout(this._ot); this._ot = setTimeout(() => { if (window.innerWidth === lastW) return; lastW = window.innerWidth; ST.refresh(); this.resize(); this.computeSlash(); }, 400); };
     window.addEventListener('resize', this.onOrient);
+    // web fonts / icons can change chip sizes after the timeline is built; re-measure when they do
+    { let rt; const again = () => { clearTimeout(rt); rt = setTimeout(() => ST.refresh(), 150); };
+      if (document.fonts && document.fonts.ready) document.fonts.ready.then(again);
+      window.addEventListener('load', again, { once: true });
+      if (window.ResizeObserver) { this.chipRO = new ResizeObserver(again); this.chips.forEach(c => c && this.chipRO.observe(c)); } }
     this.onOrientChange = () => { [500, 1200].forEach(d => setTimeout(() => { lastW = window.innerWidth; ST.refresh(); this.resize(); this.computeSlash(); }, d)); };
     window.addEventListener('orientationchange', this.onOrientChange);
     if (screen.orientation && screen.orientation.addEventListener) screen.orientation.addEventListener('change', this.onOrientChange);
@@ -791,10 +796,10 @@ class Component extends DCLogic {
         const ics = icon ? getComputedStyle(icon) : null;
         this.pile.items.push({ icon, img: im, slot, rot: rot * 0.55, bg: ics ? ics.backgroundColor : '#F4F6F9', radius: ics ? ics.borderTopLeftRadius : '8px' }); }
       tl.to(el, { autoAlpha: 1, duration: 0.04, ease: 'none' }, tIn)
-        .to(el, { x: 0, rotation: 0, duration: 1.1, ease: 'power1.inOut' }, at)
-        .to(el, { scale: 1, duration: 0.5, ease: 'power2.out' }, at)
-        .to(el, { y: () => dy() * 0.45 - 90, duration: 0.38, ease: 'power2.out' }, at)
-        .to(el, { y: 0, duration: 0.5, ease: 'power2.in' }, at + 0.38)
+        .to(el, { x: 0, rotation: 0, duration: 0.85, ease: 'power1.inOut' }, at + 0.25)
+        .to(el, { scale: 1, duration: 0.6, ease: 'power2.out' }, at + 0.1)
+        .to(el, { y: () => { const L = self.layout(), p = self.chipPos(el); return Math.min(L.y + L.dh * 0.3 - p.y, dy() * 0.45 - 90); }, duration: 0.4, ease: 'power2.out' }, at)
+        .to(el, { y: 0, duration: 0.48, ease: 'power2.in' }, at + 0.4)
         .to(el, { y: -12, duration: 0.11, ease: 'power1.out' }, at + 0.88)
         .to(el, { y: 0, duration: 0.11, ease: 'power1.in' }, at + 0.99)
         .to(el, { ...fin, duration: 0.3, ease: 'power1.out' }, at + 1.02)
