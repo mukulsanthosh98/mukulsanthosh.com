@@ -711,6 +711,13 @@ class Component extends DCLogic {
       onUpdate: s => gsap.to(tl, { progress: s.progress, duration: 0.45, ease: 'power1.out', overwrite: true }),
       onRefresh: s => { this.resize(); const p = s.progress; tl.progress(0).invalidate().progress(p); }
     });
+    // iOS fires resize mid-rotation with stale sizes; re-measure once the new orientation settles
+    let lastW = window.innerWidth;
+    this.onOrient = () => { clearTimeout(this._ot); this._ot = setTimeout(() => { if (window.innerWidth === lastW) return; lastW = window.innerWidth; ST.refresh(); this.resize(); this.computeSlash(); }, 400); };
+    window.addEventListener('resize', this.onOrient);
+    this.onOrientChange = () => { [500, 1200].forEach(d => setTimeout(() => { lastW = window.innerWidth; ST.refresh(); this.resize(); this.computeSlash(); }, d)); };
+    window.addEventListener('orientationchange', this.onOrientChange);
+    if (screen.orientation && screen.orientation.addEventListener) screen.orientation.addEventListener('change', this.onOrientChange);
     const fr = { f: 0 };
     tl.to(fr, { f: 143, duration: D, ease: 'none', onUpdate: () => { const n = Math.round(fr.f); if (n !== this.cur) { this.cur = n; this.draw(); } } }, 0);
     const self = this;
