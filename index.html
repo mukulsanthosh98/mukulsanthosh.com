@@ -667,7 +667,7 @@ class Component extends DCLogic {
 
   // Tools drawn inside the box (behind its front wall) until they spill out as DOM chips
   drawPile(L) {
-    if (!this.pile || this.cur >= 97) return;
+    if (!this.pile || (this.tl && this._tIn != null && this.tl.time() >= this._tIn)) return;
     const f = Math.min(95, this.cur + 1);
     // front-wall top edge (frame-relative y) and pile offset below it, measured from the frames
     const K = [[1,.70,.14],[24,.70,.14],[30,.61,.14],[36,.47,.14],[48,.43,.14],[54,.54,.09],[60,.57,.045],[66,.615,.005],[75,.655,-.02],[85,.675,-.04],[95,.705,-.06]];
@@ -681,14 +681,14 @@ class Component extends DCLogic {
     const order = this.pile.items.slice().sort((m, n) => m.slot.z - n.slot.z);
     for (const it of order) {
       const sp = it.icon, im = it.img; if (!sp || !im || !im.complete || !im.naturalWidth) continue;
-      const S = sp.offsetWidth * it.slot.s, iw = im.offsetWidth * it.slot.s, ih = im.offsetHeight * it.slot.s;
+      const S = sp.offsetWidth * it.slot.s, iw = im._w() * it.slot.s, ih = im._h() * it.slot.s;
       const X = L.x + L.dw * (q.cx + it.slot.fx * q.sw), Y = L.y + L.dh * (cy + it.slot.fy * q.sh);
       ctx.save(); ctx.translate(X, Y); ctx.rotate(it.rot * Math.PI / 180);
       const r = Math.min(S / 2, parseFloat(it.radius) * it.slot.s || 8);
-      ctx.fillStyle = it.bg; ctx.beginPath();
+      ctx.beginPath();
       if (ctx.roundRect) ctx.roundRect(-S / 2, -S / 2, S, S, r); else ctx.rect(-S / 2, -S / 2, S, S);
-      ctx.fill();
-      ctx.drawImage(im, -iw / 2, -ih / 2, iw, ih);
+      if (sp.tagName === 'IMG') { ctx.clip(); ctx.drawImage(im, -S / 2, -S / 2, S, S); }
+      else { ctx.fillStyle = it.bg; ctx.fill(); ctx.drawImage(im, -iw / 2, -ih / 2, iw, ih); }
       ctx.restore();
     }
     ctx.restore();
@@ -779,23 +779,26 @@ class Component extends DCLogic {
       const c = si - acc, cnt = Math.max(1, counts[r]), h1 = ((i * 73) % 100) / 100 - 0.5, h2 = ((i * 37 + 11) % 100) / 100 - 0.5;
       const widen = 0.72 + 0.28 * r / (R - 1);
       const slot = { fx: ((c + 0.5) / cnt - 0.5 + h1 * 0.3 / cnt) * widen, fy: (r + 0.5) / R - 0.5 + h2 * 0.35 / R, s: s0 * (0.88 + 0.12 * r / (R - 1)), z: r * 100 + c };
-      const ic = el.firstElementChild && el.firstElementChild.firstElementChild ? el.firstElementChild : null;
-      const icd = () => ic ? { x: ic.offsetLeft + ic.offsetWidth / 2 - el.offsetWidth / 2, y: ic.offsetTop + ic.offsetHeight / 2 - el.offsetHeight / 2 } : { x: 0, y: 0 };
+      const ic = el.firstElementChild && el.firstElementChild !== el.lastElementChild ? el.firstElementChild : null;
+      const rel = () => { if (!ic) return { x: el.offsetWidth / 2, y: el.offsetHeight / 2 }; let x = 0, y = 0, n = ic; while (n && n !== el) { x += n.offsetLeft; y += n.offsetTop; n = n.offsetParent; } if (n !== el) { let ex = 0, ey = 0, m = el; while (m) { ex += m.offsetLeft; ey += m.offsetTop; m = m.offsetParent; } let ix = 0, iy = 0; m = ic; while (m) { ix += m.offsetLeft; iy += m.offsetTop; m = m.offsetParent; } x = ix - ex; y = iy - ey; } return { x: x + ic.offsetWidth / 2, y: y + ic.offsetHeight / 2 }; };
+      const icd = () => { const r = rel(); return { x: r.x - el.offsetWidth / 2, y: r.y - el.offsetHeight / 2 }; };
       const pile = k => {
         const q = P[k];
         return {
-          x: () => { const L = self.layout(), p = self.chipPos(el); return L.x + L.dw * (k === 2 ? q.cx + slot.fx * q.sw : q.cx + jx * q.sw) - p.x - (k === 2 ? icd().x * slot.s : 0); },
-          y: () => { const L = self.layout(), p = self.chipPos(el); return L.y + L.dh * (k === 2 ? q.cy + slot.fy * q.sh : q.cy - (k < 2 ? jy * q.sh : (jy - 0.5) * q.sh)) - p.y - (k === 2 ? icd().y * slot.s : 0); }
+          x: () => { const L = self.layout(), p = self.chipPos(el); return L.x + L.dw * (k === 2 ? q.cx + slot.fx * q.sw : q.cx + jx * q.sw) - p.x - (k === 2 ? icd().x : 0); },
+          y: () => { const L = self.layout(), p = self.chipPos(el); return L.y + L.dh * (k === 2 ? q.cy + slot.fy * q.sh : q.cy - (k < 2 ? jy * q.sh : (jy - 0.5) * q.sh)) - p.y - (k === 2 ? icd().y : 0); }
         };
       };
       const p2 = pile(2);
       const dy = () => { const L = self.layout(), p = self.chipPos(el); return L.oy - p.y; };
       const tIn = D * 95 / 143;
+      { const r = rel(); gsap.set(el, { transformOrigin: r.x + 'px ' + r.y + 'px' }); }
       gsap.set(el, { x: p2.x, y: p2.y, scale: slot.s, rotation: rot * 0.55, autoAlpha: 0, zIndex: slot.z });
-      { const icon = el.firstElementChild, im = icon && icon.querySelector('img'); if (im) { im.loading = 'eager'; if (!im.complete) im.addEventListener('load', () => this.draw(), { once: true }); }
+      { const icon = el.firstElementChild, dim = icon && (icon.tagName === 'IMG' ? icon : icon.querySelector('img')); let im = null; if (dim) { im = new Image(); im.decoding = 'async'; im.onload = () => this.draw(); im.src = dim.getAttribute('src'); im._w = () => dim.offsetWidth; im._h = () => dim.offsetHeight; }
         const ics = icon ? getComputedStyle(icon) : null;
         this.pile.items.push({ icon, img: im, slot, rot: rot * 0.55, bg: ics ? ics.backgroundColor : '#F4F6F9', radius: ics ? ics.borderTopLeftRadius : '8px' }); }
-      tl.to(el, { autoAlpha: 1, duration: 0.04, ease: 'none' }, tIn)
+      self._tIn = tIn;
+      tl.set(el, { autoAlpha: 1 }, tIn)
         .to(el, { x: 0, rotation: 0, duration: 0.85, ease: 'power1.inOut' }, at + 0.25)
         .to(el, { scale: 1, duration: 0.6, ease: 'power2.out' }, at + 0.1)
         .to(el, { y: () => { const L = self.layout(), p = self.chipPos(el); return Math.min(L.y + L.dh * 0.3 - p.y, dy() * 0.45 - 90); }, duration: 0.4, ease: 'power2.out' }, at)
